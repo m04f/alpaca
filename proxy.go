@@ -95,7 +95,7 @@ func (ph ProxyHandler) handleConnect(w http.ResponseWriter, req *http.Request) {
 	closeInDefer := true
 	defer func() {
 		if closeInDefer {
-			server.Close()
+			_ = server.Close()
 		}
 	}()
 	// Take over the connection back to the client by hijacking the ResponseWriter.
@@ -113,7 +113,7 @@ func (ph ProxyHandler) handleConnect(w http.ResponseWriter, req *http.Request) {
 	}
 	defer func() {
 		if closeInDefer {
-			client.Close()
+			_ = client.Close()
 		}
 	}()
 	// Write the response directly to the client connection. If we use Go's ResponseWriter, it
@@ -133,8 +133,8 @@ func (ph ProxyHandler) handleConnect(w http.ResponseWriter, req *http.Request) {
 	// will close the Reader for the other goroutine, forcing any blocked copy to unblock. This
 	// prevents any goroutine from blocking indefinitely (which will leak a file descriptor).
 	closeInDefer = false
-	go func() { _, _ = io.Copy(server, client); server.Close() }()
-	go func() { _, _ = io.Copy(client, server); client.Close() }()
+	go func() { _, _ = io.Copy(server, client); _ = server.Close() }()
+	go func() { _, _ = io.Copy(client, server); _ = client.Close() }()
 }
 
 func connectDirect(req *http.Request) (net.Conn, error) {
@@ -149,7 +149,7 @@ func connectDirect(req *http.Request) (net.Conn, error) {
 func connectViaProxy(req *http.Request, proxyURL *url.URL, auth *authenticator) (net.Conn, error) {
 	id := req.Context().Value(contextKeyID)
 	var tr transport
-	defer tr.Close()
+	defer tr.Close() //nolint:errcheck
 	if proxyURL.Scheme == "socks5" {
 		dialer, err := proxy.SOCKS5("tcp", proxyURL.Host, nil, proxy.Direct)
 		if err != nil {
@@ -171,7 +171,7 @@ func connectViaProxy(req *http.Request, proxyURL *url.URL, auth *authenticator) 
 		return nil, err
 	} else if resp.StatusCode == http.StatusProxyAuthRequired && auth != nil {
 		log.Printf("[%d] Got %q response, retrying with auth", id, resp.Status)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err := tr.dial(proxyURL); err != nil {
 			log.Printf("[%d] Error re-dialling %s: %v", id, proxyURL.Host, err)
 			return nil, err
@@ -182,7 +182,7 @@ func connectViaProxy(req *http.Request, proxyURL *url.URL, auth *authenticator) 
 		}
 		log.Printf("[%d] Got %q response", id, resp.Status)
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("[%d] Unexpected response status: %s", id, resp.Status)
 	}
@@ -218,7 +218,7 @@ func (ph ProxyHandler) proxyRequest(w http.ResponseWriter, req *http.Request, au
 		return
 	}
 	if resp.StatusCode == http.StatusProxyAuthRequired && auth != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		log.Printf("[%d] Got %q response, retrying with auth", id, resp.Status)
 		_, err = rd.Seek(0, io.SeekStart)
 		if err != nil {
@@ -234,7 +234,7 @@ func (ph ProxyHandler) proxyRequest(w http.ResponseWriter, req *http.Request, au
 		}
 		log.Printf("[%d] Got %q response", id, resp.Status)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	copyResponseHeaders(w, resp)
 	w.WriteHeader(resp.StatusCode)
 	_, err = io.Copy(w, resp.Body)

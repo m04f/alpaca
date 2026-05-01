@@ -32,10 +32,10 @@ jobs:
     strategy:
       matrix:
         target:
-          - os: 'macos-13'
+          - os: 'macos-15-intel'
             goos: 'darwin'
             goarch: 'amd64'
-          - os: 'macos-13'
+          - os: 'macos-14'
             goos: 'darwin'
             goarch: 'arm64'
           - os: 'ubuntu-22.04'
@@ -48,16 +48,16 @@ jobs:
             goos: 'windows'
             goarch: 'amd64'
             ext: '.exe'
-        go: [ '1.22' ]
+        go: [ '1.25' ]
 
     runs-on: ${{ matrix.target.os }}
 
     needs: [ release ]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go }}
 
