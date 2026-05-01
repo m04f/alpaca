@@ -83,7 +83,8 @@ func TestFallbackToDirectWhenNotConnected(t *testing.T) {
 	assert.Nil(t, proxy)
 }
 
-// Removed TestFallbackToDirectWhenNoPACURL - behaviour is fallback to system default when no PACURL, test case TestFallbackToDefaultWhenNoPACUrl
+// Removed TestFallbackToDirectWhenNoPACURL. Behaviour is fallback to system default when no
+// PACURL; see test case TestFallbackToDefaultWhenNoPACUrl.
 
 func TestSkipBadProxies(t *testing.T) {
 	js := `function FindProxyForURL(url, host) { return "PROXY primary:80; PROXY backup:80" }`

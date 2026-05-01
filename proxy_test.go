@@ -381,8 +381,8 @@ func setupSOCKS5TestServers(t *testing.T) *httptest.Server {
 	server := socks5.NewServer()
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
-	go server.Serve(l)
-	t.Cleanup(func() { l.Close() })
+	go func() { _ = server.Serve(l) }()
+	t.Cleanup(func() { _ = l.Close() })
 	socks5Addr := l.Addr().String()
 
 	// 3. Build minimal Alpaca handler
@@ -390,8 +390,7 @@ func setupSOCKS5TestServers(t *testing.T) *httptest.Server {
 		return url.Parse("socks5://" + socks5Addr)
 	}, func(string) {})
 
-	var handler http.Handler = http.NotFoundHandler()
-	handler = proxyHandler.WrapHandler(handler)
+	handler := proxyHandler.WrapHandler(http.NotFoundHandler())
 
 	// 4. Create Alpaca test server
 	alpacaServer := httptest.NewServer(handler)
@@ -405,7 +404,8 @@ func TestSOCKS5Proxy(t *testing.T) {
 
 	// Set up a destination server
 	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, r.URL.Path)
+		_, err := fmt.Fprint(w, r.URL.Path)
+		require.NoError(t, err)
 	}))
 	t.Cleanup(func() { destServer.Close() })
 
@@ -419,7 +419,7 @@ func TestSOCKS5Proxy(t *testing.T) {
 	}
 	resp, err := client.Get(destServer.URL + "/testpath")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { require.NoError(t, resp.Body.Close()) }()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	body, err := io.ReadAll(resp.Body)

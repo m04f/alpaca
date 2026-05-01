@@ -122,7 +122,8 @@ func (pf *ProxyFinder) findProxyForRequest(req *http.Request) (*url.URL, error) 
 		} else if fields[0] == "SOCKS5" {
 			if !pf.enableSocks {
 				log.Printf(
-					"[%d] Ignoring SOCKS5 proxy: %q (restart Alpaca with -enable-socks to allow SOCKS5 proxies from PAC files)",
+					"[%d] Ignoring SOCKS5 proxy: %q "+
+						"(restart Alpaca with -enable-socks to allow SOCKS5 proxies from PAC files)",
 					id, elem,
 				)
 				continue
